@@ -68,13 +68,15 @@ void generateDataPacket(uint8_t moduleSelect, uint8_t colAddr, bool colData, uin
 
 
 
-void writeDot(uint8_t x, uint8_t y, bool state) {
+void writeDot(uint8_t x, uint8_t y, bool state, uint8_t overwriteModuleBits = 0) {
     // calculate digit (B0/B1) and segment (A0-A2) of adress
     uint8_t colFpDigit = (x % 28) / 7;
     uint8_t colFpSegment = x % 7 + 1;
 
     uint8_t moduleNum = 7 - (x / 28);
     uint8_t moduleBits = 1 << moduleNum;
+    if(overwriteModuleBits)
+        moduleBits = overwriteModuleBits;
 
     uint8_t rowFpDigit = ((y % 14) / 7) * 2 + !state; // even digits are set, odd digits are unset
     uint8_t rowFpSegment = y % 7 + 1;
@@ -86,7 +88,7 @@ void writeDot(uint8_t x, uint8_t y, bool state) {
 
     generateDataPacket(moduleBits, colAddr, !state, rowAddr, state, rowLowDriver, state, !rowLowDriver);
 
-    // Serial.printf("x=%3d y=%2d state=%d moduleBits=%02X colAddr=%02X rowAddr=%02X buf= %02X %02X %02X\n", x, y, state, moduleBits, colAddr, rowAddr, i2cBuf[0], i2cBuf[1], i2cBuf[2]);
+    Serial.printf("x=%3d y=%2d state=%d moduleBits=%02X colAddr=%02X rowAddr=%02X buf= %02X %02X %02X\n", x, y, state, moduleBits, colAddr, rowAddr, i2cBuf[0], i2cBuf[1], i2cBuf[2]);
 
     i2cWriteByte(0x40, i2cBuf[0]);
     i2cWriteByte(0x42, i2cBuf[1]);
@@ -149,7 +151,7 @@ void writeFrameBuffer() {
 
                     generateDataPacket(moduleBits, colAddr, !state, rowAddr, state, rowLowDriver, state, !rowLowDriver);
 
-                    Serial.printf("x=%3d y=%2d state=%d moduleBits=%02X colAddr=%02X rowAddr=%02X buf= %02X %02X %02X\n", x, y, state, moduleBits, colAddr, rowAddr, i2cBuf[0], i2cBuf[1], i2cBuf[2]);
+                    // Serial.printf("x=%3d y=%2d state=%d moduleBits=%02X colAddr=%02X rowAddr=%02X buf= %02X %02X %02X\n", x, y, state, moduleBits, colAddr, rowAddr, i2cBuf[0], i2cBuf[1], i2cBuf[2]);
 
                     i2cWriteByte(0x40, i2cBuf[0]);
                     i2cWriteByte(0x42, i2cBuf[1]);
@@ -205,10 +207,24 @@ void loop() {
     //     }
     // }
 
-    memset(frameBuffer, 0xFF, sizeof(frameBuffer));
-    writeFrameBuffer();
-    memset(frameBuffer, 0x00, sizeof(frameBuffer));
-    writeFrameBuffer();
+    // memset(frameBuffer, 0xFF, sizeof(frameBuffer));
+    // writeFrameBuffer();
+    // memset(frameBuffer, 0x00, sizeof(frameBuffer));
+    // writeFrameBuffer();
+
+    writeDot(0, 0, 1);
+    delay(500);
+    writeDot(0, 0, 0);
+    delay(500);
+    writeDot(28, 0, 1);
+    delay(500);
+    writeDot(28, 0, 0);
+    delay(500);
+    writeDot(0, 0, 1, 0xC0);
+    delay(500);
+    writeDot(0, 0, 0, 0xC0);
+    delay(500);
+    
 
 
 
