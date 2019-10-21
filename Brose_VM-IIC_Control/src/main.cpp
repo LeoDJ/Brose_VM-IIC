@@ -1,7 +1,6 @@
 // Possible Speed Improvements:
 // * Hardware I²C at 400kHz (disable ACK check)
-// * better software serial implementation with ignorable ACK check
-// * writing to both rows and 4 modules at the same time
+// * faster software serial implementation with ignorable ACK check
 
 
 #include <Arduino.h>
@@ -122,44 +121,10 @@ void setDot(uint8_t x, uint8_t y, bool state) {
 }
 
 void writeFrameBuffer() {
-    for(uint8_t y = 0; y < DISPLAY_HEIGHT; y++) {
-        for(uint8_t x = 0; x < 28; x++) {
-            for(uint8_t state = 0; state < 2; state++) { // runs code for dots to set and to unset
-
-                uint8_t moduleBits = 0;
-                for(uint8_t i = 0; i < 4; i++) { // x "multiplexing"
-                    if(dotChanged(x + i * 28, y)) {
-                        if(getDot(x + i * 28, y) == state) {
-                            moduleBits |= 0x80 >> i; // enable module containing current x
-                        }
-                    }
-                }
-
-                if(moduleBits) { // check if any dots need to be written to
-                    uint8_t colFpDigit = x / 7;
-                    uint8_t colFpSegment = x % 7 + 1;
-
-                    uint8_t rowFpDigit = ((y % 14) / 7) * 2 + !state; // even digits are set, odd digits are unset
-                    uint8_t rowFpSegment = y % 7 + 1;
-
-                    bool rowLowDriver = y < 14;
-
-                    uint8_t colAddr = colFpDigit << 3 | colFpSegment;
-                    uint8_t rowAddr = rowFpDigit << 3 | rowFpSegment;
-
-                    generateDataPacket(moduleBits, colAddr, !state, rowAddr, state, rowLowDriver, state, !rowLowDriver);
-
-                    Serial.printf("x=%3d y=%2d state=%d moduleBits=%02X colAddr=%02X rowAddr=%02X buf= %02X %02X %02X\n", x, y, state, moduleBits, colAddr, rowAddr, i2cBuf[0], i2cBuf[1], i2cBuf[2]);
-
-                    i2cWriteByte(0x40, i2cBuf[0]);
-                    i2cWriteByte(0x42, i2cBuf[1]);
-                    i2cWriteByte(0x44, i2cBuf[2]);
-
-                    delayMicroseconds(550);
-
-                    i2cBuf[2] &= 0x0F; // only clear row driver enables
-                    i2cWriteByte(0x44, i2cBuf[2]);
-                }
+    for(uint8_t x = 0; x < DISPLAY_WIDTH; x++) {
+        for(uint8_t y = 0; y < DISPLAY_HEIGHT; y++) {
+            if(dotChanged(x, y)) {
+                writeDot(x, y, getDot(x, y));
             }
         }
     }
@@ -176,7 +141,7 @@ void setup() {
             writeDot(x, y, 0);
         }
     }
-    writeDot(0, 10, 1);
+    writeDot(0, 0, 1);
 }
 
 void printBuf(uint8_t* buf, uint32_t size) {
@@ -193,46 +158,10 @@ void printBuf(uint8_t* buf, uint32_t size) {
 }
 
 void loop() {
-    // for(uint8_t y = 0; y < 19; y++) {
-    //     for(uint8_t x = 0; x < 112; x++) {
-    //         writeDot(x, y, 1);
-    //     }
-    // }
 
-    // for(uint8_t y = 0; y < 19; y++) {
-    //     for(uint8_t x = 0; x < 112; x++) {
-    //         writeDot(x, y, 0);
-    //     }
-    // }
-
-    memset(frameBuffer, 0xFF, sizeof(frameBuffer));
+    memset(frameBuffer, 0x01, sizeof(frameBuffer));
     writeFrameBuffer();
     memset(frameBuffer, 0x00, sizeof(frameBuffer));
     writeFrameBuffer();
-
-
-
-    // uint32_t count = 0;
-    // for(uint8_t x = 0; x < DISPLAY_WIDTH; x++) {
-    //     for(uint8_t y = 0; y < DISPLAY_HEIGHT; y++) {
-    //         count += dotChanged(x, y);
-    //     }
-    // }
-    // Serial.println(count);
-    // Serial.print("getDot:         ");
-    // for(int i = 0; i < DISPLAY_HEIGHT; i++) {
-    //     Serial.print(String(getDot(i, i)) + " ");
-    // }
-    // Serial.println();
-    // Serial.print("getDotFromPrev: ");
-    // for(int i = 0; i < DISPLAY_HEIGHT; i++) {
-    //     Serial.print(String(getDotFromBuffer(i, i, previousFrameBuffer)) + " ");
-    // }
-    // Serial.println();
-    // Serial.print("dotChanged:     ");
-    // for(int i = 0; i < DISPLAY_HEIGHT; i++) {
-    //     Serial.print(String(dotChanged(i, i)) + " ");
-    // }
-    // Serial.println();
 }
 
