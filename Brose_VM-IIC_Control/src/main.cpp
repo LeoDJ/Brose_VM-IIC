@@ -7,8 +7,17 @@
 #include <Wire.h>
 #include <XantoI2C.h>
 
+#include <SPI.h> // only needed so AdafruitGFX compiles
+#include <Adafruit_GFX.h>
+#include <Fonts/TomThumb.h>
+#include <Fonts/FreeSans12pt7b.h>
+#include <Fonts/FreeSans9pt7b.h>
+#include <Fonts/FreeMonoBold12pt7b.h>
+
 #define DISPLAY_WIDTH   112
 #define DISPLAY_HEIGHT  19
+
+#define FLIP_TIME       550
 
 XantoI2C i2c(22, 21, 0);
 
@@ -17,7 +26,6 @@ uint8_t i2cBuf[3] = {0};
 // this works, because 112 is divisible by 8, be careful, when changing
 uint8_t frameBuffer[((DISPLAY_WIDTH * DISPLAY_HEIGHT) / 8)] = {};
 uint8_t previousFrameBuffer[sizeof(frameBuffer)] = {0};
-
 
 
 void i2cWriteByte(uint8_t addr, uint8_t data) {
@@ -66,7 +74,6 @@ void generateDataPacket(uint8_t moduleSelect, uint8_t colAddr, bool colData, uin
 }
 
 
-
 void writeDot(uint8_t x, uint8_t y, bool state) {
     // calculate digit (B0/B1) and segment (A0-A2) of adress
     uint8_t colFpDigit = (x % 28) / 7;
@@ -91,7 +98,7 @@ void writeDot(uint8_t x, uint8_t y, bool state) {
     i2cWriteByte(0x42, i2cBuf[1]);
     i2cWriteByte(0x44, i2cBuf[2]);
 
-    delayMicroseconds(550);
+    delayMicroseconds(FLIP_TIME);
 
     i2cBuf[2] &= 0x0F; // only clear row driver enables
     i2cWriteByte(0x44, i2cBuf[2]);
@@ -108,6 +115,10 @@ bool dotChanged(uint8_t x, uint8_t y) {
 
 bool getDot(uint8_t x, uint8_t y) {
     return getDotFromBuffer(x, y, frameBuffer);
+}
+
+bool setFrameBuffer(uint8_t value) {
+    memset(frameBuffer, value, sizeof(frameBuffer));
 }
 
 void setDot(uint8_t x, uint8_t y, bool state) {
@@ -128,40 +139,115 @@ void writeFrameBuffer() {
             }
         }
     }
+    i2cWriteByte(0x40, 0xFF); // disable all modules
 
     //store previous frame Buffer
     memcpy(previousFrameBuffer, frameBuffer, sizeof(previousFrameBuffer));
 }
 
+class GFX : public Adafruit_GFX {
+    public:
+        GFX(int16_t w, int16_t h) : Adafruit_GFX(w, h) {}
+        void drawPixel(int16_t x, int16_t y, uint16_t color) {
+            setDot(x, y, !!color);
+        }
+};
+
+GFX gfx(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+
+
+void drawCenteredText(int16_t y, const char* text) {
+    int16_t x_, y_;
+    uint16_t w, h;
+    gfx.getTextBounds(text, 0, y, &x_, &y_, &w, &h);
+    
+    int16_t x = DISPLAY_WIDTH / 2 - w/2;
+    gfx.setCursor(x, y);
+    gfx.print(text);
+
+}
+
+
+uint16_t scrollTextWidth = 0;
+int16_t scrollTextIdx = 0, scrollTextY;
+const char* scrollTextText;
+
+void startScrollText(int16_t x, int16_t y, const char* text) {
+    scrollTextText = text;
+    scrollTextY = y;
+
+    gfx.setFont(&FreeSans12pt7b);
+    gfx.setCursor(x, y);
+    gfx.setTextColor(1);
+    gfx.setTextWrap(0);
+
+    int16_t x_, y_;
+    uint16_t h;
+    gfx.getTextBounds(text, x, y, &x_, &y_, &scrollTextWidth, &h);
+
+}
+
+void scrollTextTick() {
+    if(scrollTextText) {
+        gfx.setCursor(-scrollTextIdx, scrollTextY);
+        setFrameBuffer(0);
+        gfx.print(scrollTextText);
+        scrollTextIdx+=2;
+
+        if(scrollTextIdx >= scrollTextWidth) {
+            scrollTextText = 0;
+        }
+
+        writeFrameBuffer();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
 
+    // blank display
     for(uint8_t y = 0; y < 19; y++) {
         for(uint8_t x = 0; x < 112; x++) {
             writeDot(x, y, 0);
         }
     }
     writeDot(0, 0, 1);
+
+    // startScrollText(0, 16, "Maker Space");
+
+
 }
 
-void printBuf(uint8_t* buf, uint32_t size) {
-    for(uint32_t i = 0; i < size; i++) {
-        if(i % 16 == 0) {
-            Serial.printf("%04X:  ", i);
-        }
-        Serial.printf("%02X ", buf[i]);
-        if(i % 16 == 15) {
-            Serial.printf("\n");
-        }
-    }
-    Serial.println();
-}
-
+unsigned long lastTick = 0;
 void loop() {
 
-    memset(frameBuffer, 0x01, sizeof(frameBuffer));
+    // memset(frameBuffer, 0x01, sizeof(frameBuffer));
+    // writeFrameBuffer();
+    // memset(frameBuffer, 0x00, sizeof(frameBuffer));
+    // writeFrameBuffer();
+
+    // gfx.setFont(&FreeSans9pt7b);
+    // gfx.setCursor(0, 0);
+    // gfx.setTextColor(1);
+    // gfx.print("This is a list of the scorpions of Trinidad and Tobago. The first synopsis of the scorpion fauna came from E");
+
+    // writeFrameBuffer();
+    // if(millis() - lastTick >= 600) {
+    //     lastTick = millis();
+    //     scrollTextTick();
+    // }
+
+    gfx.setFont(&FreeMonoBold12pt7b);
+    gfx.setTextColor(1);
+    setFrameBuffer(0);
+    drawCenteredText(14, "Maker");
     writeFrameBuffer();
-    memset(frameBuffer, 0x00, sizeof(frameBuffer));
+    delay(1000);
+    setFrameBuffer(0);
+    drawCenteredText(14, "Space");
     writeFrameBuffer();
+    delay(1000);
+
+
 }
 
