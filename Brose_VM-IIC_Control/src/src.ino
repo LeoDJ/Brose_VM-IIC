@@ -7,11 +7,15 @@
 #include <Wire.h>
 #include <XantoI2C.h>
 
-#include <VM_IIC.h>
+#include "VM_IIC.h"
 #include <Fonts/TomThumb.h>
 #include <Fonts/FreeSans12pt7b.h>
 #include <Fonts/FreeSans9pt7b.h>
 #include <Fonts/FreeMonoBold12pt7b.h>
+
+#include "config.h"
+#include <WiFiMulti.h>
+#include "ota.h"
 
 
 #define DISPLAY_WIDTH   112
@@ -40,6 +44,7 @@ void i2cWriteByteSoftware(uint8_t addr, uint8_t data) {
 
 VM_IIC flipdot(DISPLAY_WIDTH, DISPLAY_HEIGHT, FLIP_TIME, i2cWriteByteSoftware);
 
+WiFiMulti wifiMulti;
 
 void setup() {
     Serial.begin(115200);
@@ -50,6 +55,18 @@ void setup() {
 
     // flipdot.setFont(&FreeSans12pt7b);
     // flipdot.startScrollText(0, 16, "Maker Space");
+
+    flipdot.print("Connecting to WiFi...");
+    flipdot.update();
+
+    wifiMulti.addAP(WIFI_SSID, WIFI_PASS);
+    if(wifiMulti.run() == WL_CONNECTED) {
+        Serial.println("");
+        Serial.println("WiFi connected");
+        Serial.println("IP address: ");
+        Serial.println(WiFi.localIP());
+    }
+    initOTA();
 }
 
 void loop() {
@@ -65,6 +82,9 @@ void loop() {
     flipdot.drawCenteredText(14, "Space");
     flipdot.update();
     delay(1000);
+
+    loopOTA();
+    wifiMulti.run();
 
 }
 
