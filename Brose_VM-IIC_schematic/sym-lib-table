@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name Brose_VM-IIC)(type Legacy)(uri ${KIPRJMOD}/Brose_VM-IIC.lib)(options "")(descr ""))
+)

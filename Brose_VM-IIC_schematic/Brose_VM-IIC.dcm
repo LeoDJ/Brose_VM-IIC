@@ -1,0 +1,8 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP FP2800A
+D Flipdot Decoder/Driver
+F http://rainer.radow.org/doc/fp2800-datasheet.pdf
+$ENDCMP
+#
+#End Doc Library
