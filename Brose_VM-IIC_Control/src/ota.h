@@ -28,8 +28,8 @@ void initOTA() {
         // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
         Serial.println("Start updating " + type);
         flipdot.fillScreen(0);
-        flipdot.setCursor(0, 7);
         flipdot.setFont();
+        flipdot.setCursor(0, 7);
         flipdot.print("OTA...");
         flipdot.update();
     });
