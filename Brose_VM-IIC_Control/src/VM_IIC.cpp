@@ -163,13 +163,17 @@ void VM_IIC::setFrameBuffer(uint8_t value) {
 }
 
 
-void VM_IIC::drawCenteredText(int16_t y, const char* text) {
+uint16_t VM_IIC::getTextWidth(const char* text) {
     int16_t x_, y_;
     uint16_t w, h;
-    getTextBounds(text, 0, y, &x_, &y_, &w, &h);
-    
-    int16_t x = WIDTH / 2 - w / 2;
-    setCursor(x, y);
+    getTextBounds(text, 0, 0, &x_, &y_, &w, &h);
+    return w;
+}
+
+
+void VM_IIC::drawCenteredText(int16_t xOffset, int16_t y, const char* text) {
+    int16_t x = WIDTH / 2 - getTextWidth(text) / 2;
+    setCursor(x + xOffset, y);
     print(text);
 }
 

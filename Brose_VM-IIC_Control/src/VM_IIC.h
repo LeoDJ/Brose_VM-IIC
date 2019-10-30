@@ -28,8 +28,8 @@ class VM_IIC : public Adafruit_GFX {
         bool getDot(uint8_t x, uint8_t y);
         void setFrameBuffer(uint8_t value);
 
-
-        void drawCenteredText(int16_t y, const char* text);
+        uint16_t getTextWidth(const char* text);
+        void drawCenteredText(int16_t xOffset, int16_t y, const char* text);
         void clearDisplay();
 
         void startScrollText(int16_t x, int16_t y, const char* text);
