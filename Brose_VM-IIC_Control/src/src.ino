@@ -49,6 +49,8 @@ WiFiMulti wifiMulti;
 void setup() {
     Serial.begin(115200);
 
+    flipdot.setModuleMapping(8, 7, 6, 5);
+    
     // blank display
     flipdot.clearDisplay();
     flipdot.writeDot(0, 0, 1); // indicate done

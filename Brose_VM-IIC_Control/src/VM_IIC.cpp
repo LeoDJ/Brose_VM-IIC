@@ -25,6 +25,18 @@ VM_IIC::VM_IIC(int16_t w, int16_t h, uint16_t flipTime, void (*i2cWriteFunc)(uin
 }
 
 
+void VM_IIC::setModuleMapping(uint8_t m1, uint8_t m2, uint8_t m3, uint8_t m4, uint8_t m5, uint8_t m6, uint8_t m7, uint8_t m8) {
+    moduleMapping[0] = m1;
+    moduleMapping[1] = m2;
+    moduleMapping[2] = m3;
+    moduleMapping[3] = m4;
+    moduleMapping[4] = m5;
+    moduleMapping[5] = m6;
+    moduleMapping[6] = m7;
+    moduleMapping[7] = m8;
+}
+
+
 void VM_IIC::setDebugSerial(Stream* serialObj) {
     _debugSerial = serialObj;
 }
@@ -79,7 +91,7 @@ void VM_IIC::writeDot(uint8_t x, uint8_t y, bool state) {
     uint8_t colFpDigit = (x % 28) / 7;
     uint8_t colFpSegment = x % 7 + 1;
 
-    uint8_t moduleNum = 7 - (x / 28);
+    uint8_t moduleNum = moduleMapping[(x / 28)] - 1;
     uint8_t moduleBits = 1 << moduleNum;
 
     uint8_t rowFpDigit = ((y % 14) / 7) * 2 + !state; // even digits are set, odd digits are unset
