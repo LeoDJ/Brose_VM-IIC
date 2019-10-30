@@ -1,6 +1,8 @@
 #include "config.h"
 #include <ArduinoOTA.h>
 
+extern VM_IIC flipdot;
+
 void initOTA() {
     Serial.print("Initializing OTA... ");
     // Port defaults to 3232
@@ -25,9 +27,18 @@ void initOTA() {
 
         // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
         Serial.println("Start updating " + type);
+        flipdot.fillScreen(0);
+        flipdot.setCursor(0, 7);
+        flipdot.setFont();
+        flipdot.print("OTA...");
+        flipdot.update();
     });
     ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) { Serial.printf("Progress: %u%%\r", (progress / (total / 100))); });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) { 
+        Serial.printf("Progress: %u%%\r", (progress / (total / 100))); 
+        flipdot.setDot((progress / (total / flipdot.width())), flipdot.height() - 1, 1);
+        flipdot.update();
+        });
     ArduinoOTA.onError([](ota_error_t error) {
         Serial.printf("Error[%u]: ", error);
         if (error == OTA_AUTH_ERROR)
@@ -40,6 +51,9 @@ void initOTA() {
             Serial.println("Receive Failed");
         else if (error == OTA_END_ERROR)
             Serial.println("End Failed");
+        flipdot.fillScreen(0);
+        flipdot.print("OTA failed :(");
+        flipdot.update();
     });
 
     ArduinoOTA.begin();
