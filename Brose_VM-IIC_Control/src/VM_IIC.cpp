@@ -105,7 +105,7 @@ void VM_IIC::writeDot(uint8_t x, uint8_t y, bool state) {
     generateDataPacket(moduleBits, colAddr, !state, rowAddr, state, rowLowDriver, state, !rowLowDriver);
 
     // Serial.printf("x=%3d y=%2d state=%d moduleBits=%02X colAddr=%02X rowAddr=%02X buf= %02X %02X %02X\n", x, y, state, moduleBits, colAddr, rowAddr, i2cBuf[0], i2cBuf[1], i2cBuf[2]);
-
+    
     i2cWriteByte(0x40, i2cBuf[0]);
     i2cWriteByte(0x42, i2cBuf[1]);
     i2cWriteByte(0x44, i2cBuf[2]);
@@ -129,6 +129,24 @@ void VM_IIC::update() {
 
     //store previous frame Buffer
     memcpy(previousFrameBuffer, frameBuffer, frameBufferSize);
+}
+
+bool VM_IIC::updateProgressive() {
+    for(uint8_t y = 0; y < HEIGHT; y++) {
+        if(dotChanged(progressiveXPos, y)) {
+            writeDot(progressiveXPos, y, getDot(progressiveXPos, y));
+        }
+    }
+    progressiveXPos++;
+    if(progressiveXPos >= WIDTH) {
+        progressiveXPos = 0;
+        i2cWriteByte(0x40, 0xFF); // disable all modules
+        //store previous frame Buffer
+        memcpy(previousFrameBuffer, frameBuffer, frameBufferSize);
+        return true;
+    }
+
+    return false;
 }
 
 
