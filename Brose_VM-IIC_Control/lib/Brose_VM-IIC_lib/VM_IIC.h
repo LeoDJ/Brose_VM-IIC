@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <SPI.h> // Adafruit_GFX needs this
+#include <Adafruit_I2CDevice.h>
 #include <Adafruit_GFX.h>
 
 
@@ -21,6 +22,7 @@ class VM_IIC : public Adafruit_GFX {
         void generateDataPacket(uint8_t moduleSelect, uint8_t colAddr, bool colData, uint8_t rowAddr, bool rowLData, bool rowLEnable, bool rowHData, bool rowHEnable);
         void writeDot(uint8_t x, uint8_t y, bool state);
         void update();
+        bool updateProgressive(); // returns true when cycle finished
 
         void setDot(uint8_t x, uint8_t y, bool state);
         bool getDotFromBuffer(uint8_t x, uint8_t y, uint8_t* buf);
@@ -50,4 +52,5 @@ class VM_IIC : public Adafruit_GFX {
         uint16_t scrollTextWidth = 0;
         int16_t scrollTextIdx = 0, scrollTextY;
         const char* scrollTextText;
+        uint16_t progressiveXPos = 0;
 };
