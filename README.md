@@ -15,13 +15,23 @@ For the correct method of controlling the FP2800 flipdot drivers, look into its 
 ### Schematic 
 I reverse engineered the most important aspects of the VM-IIC and documented it [here](Brose_VM-IIC_schematic/Brose_VM-IIC_schematic.pdf).
 
-### Plug Pinout
+### CPC Plug Pinout
 | Pin | Color  | Function |
 | --- | ------ | -------- |
 | 1   | White  | SDA A    |
 | 2   | Brown  | SDA B    |
 | 3   | Green  | SCL A    |
 | 4   | Yellow | SCL B    |
+
+### Pluggable Screw Terminal on VM-IIC Board
+| Pin | Color  | Function |
+| --- | ------ | -------- |
+| 1   | Red    | 24V      |
+| 2   | Blue   | GND      |
+| 3   | White  | SDA A    |
+| 4   | Brown  | SDA B    |
+| 5   | Green  | SCL A    |
+| 6   | Yellow | SCL B    |
 
 ### I²C Port Expander Mapping
 | Address | I²C Bit | Function               |
@@ -34,7 +44,7 @@ I reverse engineered the most important aspects of the VM-IIC and documented it 
 |         | 5       | Module Select 3        |
 |         | 6       | Module Select 2        |
 |         | 7       | Module Select 1        |
-| 0x42    | 0       | ???                    |
+| 0x42    | 0       | N/C                    |
 |         | 1       | Column FP2800 B1       |
 |         | 2       | Column FP2800 B0       |
 |         | 3       | Column FP2800 A2       |
@@ -42,15 +52,67 @@ I reverse engineered the most important aspects of the VM-IIC and documented it 
 |         | 5       | Column FP2800 A0       |
 |         | 6       | Column FP2800 DATA     |
 |         | 7       | Row FP2800 A2          |
-| 0x44    | 0       | Row FP2800 A2          |
-|         | 1       | Row FP2800 A1          |
-|         | 2       | Row FP2800 A0          |
-|         | 3       | Row FP2800 B1          |
-|         | 4       | Row FP2800 B0          |
-|         | 5       | Row FP2800 Low DATA    |
+| 0x44    | 0       | Row FP2800 A1          |
+|         | 1       | Row FP2800 A0          |
+|         | 2       | Row FP2800 B1          |
+|         | 3       | Row FP2800 B0          |
+|         | 4       | Row FP2800 Low DATA    |
 |         | 5       | Row FP2800 Low ENABLE  |
-|         | 5       | Row FP2800 High DATA   |
-|         | 5       | Row FP2800 High ENABLE |
+|         | 6       | Row FP2800 High DATA   |
+|         | 7       | Row FP2800 High ENABLE |
 
-Row Low: 0-13  
-Row High: 14-19
+Row Low: 1-14  
+Row High: 15-20
+
+### Row Drivers
+The VM-IIC board has eight "module select" outputs and uses two FP2800 ICs to control matrix rows. IC1 drives the rows 1 to 14, IC13 controls rows 15-20. That means one VM-IIC board can control up to 8 flipdot panels, each having up to 28x20 pixels.
+
+| Matrix  | FP2800  | Signal |
+|-------- |-------- | ----- |
+| SET 1   | IC1     | 0A    |
+| SET 2   | IC1     | 0B    |
+| SET 3   | IC1     | 0C    |
+| SET 4   | IC1     | 0D    |
+| SET 5   | IC1     | 0E    |
+| SET 6   | IC1     | 0F    |
+| SET 7   | IC1     | 0G    |
+| SET 8   | IC1     | 2A    |
+| SET 9   | IC1     | 2B    |
+| SET10   | IC1     | 2C    |
+| SET11   | IC1     | 2D    |
+| SET12   | IC1     | 2E    |
+| SET13   | IC1     | 2F    |
+| SET14   | IC1     | 2G    |
+| SET15   | IC13    | 0A    |
+| SET16   | IC13    | 0B    |
+| SET17   | IC13    | 0C    |
+| SET18   | IC13    | 0D    |
+| SET19   | IC13    | 0E    |
+| SET20   | IC13    | 0F    |
+| RESET 1 | IC1     | 1A    |
+| RESET 2 | IC1     | 1B    |
+| RESET 3 | IC1     | 1C    |
+| RESET 4 | IC1     | 1D    |
+| RESET 5 | IC1     | 1E    |
+| RESET 6 | IC1     | 1F    |
+| RESET 7 | IC1     | 1G    |
+| RESET 8 | IC1     | 3A    |
+| RESET 9 | IC1     | 3B    |
+| RESET10 | IC1     | 3C    |
+| RESET11 | IC1     | 3D    |
+| RESET12 | IC1     | 3E    |
+| RESET13 | IC1     | 3F    |
+| RESET14 | IC1     | 3G    |
+| RESET15 | IC13    | 1A    |
+| RESET16 | IC13    | 1B    |
+| RESET17 | IC13    | 1C    |
+| RESET18 | IC13    | 1D    |
+| RESET19 | IC13    | 1E    |
+| RESET20 | IC13    | 1F    |
+
+## RS422 interface
+
+Many hobby projects use microcontrollers like Arduino or ESP2866/ESP32 to control devices. To translate TTL level I²C signals to RS422 you can use for example MAX485 transceiver chips.
+
+![Transceiver schematic](./doc/RS422-transceiver.png)
+
