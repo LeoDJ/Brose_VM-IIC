@@ -1,6 +1,7 @@
 #include <VM_IIC.h>
 
-VM_IIC::VM_IIC(int16_t w, int16_t h, uint16_t flipTime, void (*i2cWriteFunc)(uint8_t, uint8_t)) : Adafruit_GFX(w, h) {
+VM_IIC::VM_IIC(int16_t w, int16_t h, uint16_t flipTime, void (*i2cWriteFunc)(uint8_t, uint8_t)) 
+    : Adafruit_GFX(w, h), prevColumnState(0xFF), prevModuleState(0) {
     _debugSerial = &Serial; // set default debug serial
     _flipTime = flipTime;
 
@@ -106,10 +107,22 @@ void VM_IIC::writeDot(uint8_t x, uint8_t y, bool state) {
     generateDataPacket(moduleBits, colAddr, !state, rowAddr, state, rowLowDriver, state, !rowLowDriver);
 
     // Serial.printf("x=%3d y=%2d state=%d moduleBits=%02X colAddr=%02X rowAddr=%02X buf= %02X %02X %02X\n", x, y, state, moduleBits, colAddr, rowAddr, i2cBuf[0], i2cBuf[1], i2cBuf[2]);
+
+    bool xStateChanged =
+        i2cBuf[0] != prevModuleState
+        || (i2cBuf[1] & 0x7E) != prevColumnState;
     
-    i2cWriteByte(0x40, i2cBuf[0]);
+    if (xStateChanged)  {
+        // flip module ENABLE back and forth if state of the columns changed
+        i2cWriteByte(0x40, 0xFF); // disable all modules
+    }
     i2cWriteByte(0x42, i2cBuf[1]);
     i2cWriteByte(0x44, i2cBuf[2]);
+    if (xStateChanged)  {
+        i2cWriteByte(0x40, i2cBuf[0]);
+        prevModuleState = i2cBuf[0];
+        prevColumnState = i2cBuf[1] & 0x7E;
+    }
 
     delayMicroseconds(_flipTime);
 
@@ -119,6 +132,8 @@ void VM_IIC::writeDot(uint8_t x, uint8_t y, bool state) {
 
 
 void VM_IIC::update() {
+    prevModuleState = 0;
+    prevColumnState = 0xFF;
     for(uint8_t x = 0; x < WIDTH; x++) {
         for(uint8_t y = 0; y < HEIGHT; y++) {
             if(dotChanged(x, y)) {
