@@ -6,7 +6,8 @@ VM_IIC::VM_IIC(int16_t w, int16_t h, uint16_t flipTime, void (*i2cWriteFunc)(uin
 
     i2cWriteByte = i2cWriteFunc;
 
-    frameBufferSize = ((w + 7) / 8) * h;
+    frameBufferWidth = (w + 7) / 8;
+    frameBufferSize = frameBufferWidth * h;
 
 
     frameBuffer = (uint8_t*)malloc(frameBufferSize);
@@ -153,16 +154,16 @@ bool VM_IIC::updateProgressive() {
 void VM_IIC::setDot(uint8_t x, uint8_t y, bool state) {
     if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
         if(state) {
-            frameBuffer[(y * WIDTH + x) / 8] |= 0x80 >> (x % 8);
+            frameBuffer[y * frameBufferWidth + x/8] |= 0x80 >> (x % 8);
         } else {
-            frameBuffer[(y * WIDTH + x) / 8] &= ~(0x80 >> (x % 8));
+            frameBuffer[y * frameBufferWidth + x/8] &= ~(0x80 >> (x % 8));
         }
     }
 }
 
 
 bool VM_IIC::getDotFromBuffer(uint8_t x, uint8_t y, uint8_t* buf) {
-    return !!(buf[(y * WIDTH + x) / 8] & (0x80 >> (x % 8)));
+    return !!(buf[y * frameBufferWidth + x/8] & (0x80 >> (x % 8)));
 }
 
 

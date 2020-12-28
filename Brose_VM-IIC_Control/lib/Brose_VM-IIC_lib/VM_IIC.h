@@ -48,6 +48,7 @@ class VM_IIC : public Adafruit_GFX {
         uint8_t* frameBuffer;
         uint8_t* previousFrameBuffer;
         uint16_t frameBufferSize;
+        uint16_t frameBufferWidth;
 
         uint16_t scrollTextWidth = 0;
         int16_t scrollTextIdx = 0, scrollTextY;
