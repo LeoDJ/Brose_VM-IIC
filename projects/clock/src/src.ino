@@ -144,11 +144,11 @@ void drawTime() {
     uint16_t timeWidth = flipdot.getTextWidth(timeStr.c_str());
     // flipdot.fillScreen(0);
     flipdot.fillRect(0, 0, 68, DISPLAY_HEIGHT, 0);
-    flipdot.setCursor(0, 11);
+    flipdot.setCursor(0, 19);
     flipdot.print(timeStr);
 
     flipdot.setFont();
-    flipdot.setCursor(0, 12);
+    flipdot.setCursor(0, 0);
     flipdot.print(dateStr);
     uint16_t dateWidth = flipdot.getTextWidth(dateStr.c_str());
 
