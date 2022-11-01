@@ -225,6 +225,8 @@ void VM_IIC::clearDisplay() {
 void VM_IIC::startScrollText(int16_t x, int16_t y, const char* text) {
     scrollTextText = text;
     scrollTextY = y;
+    scrollTextXOffset = x;
+    scrollTextIdx = 0;
 
     setCursor(x, y);
     setTextColor(1);
@@ -237,17 +239,23 @@ void VM_IIC::startScrollText(int16_t x, int16_t y, const char* text) {
 }
 
 
-void VM_IIC::scrollTextTick() {
+void VM_IIC::scrollTextTick(bool doUpdate) {
     if(scrollTextText) {
-        setCursor(-scrollTextIdx, scrollTextY);
+        setCursor(-scrollTextIdx + scrollTextXOffset, scrollTextY);
         fillScreen(0);
         print(scrollTextText);
-        scrollTextIdx+=2;
+        scrollTextIdx += 1;
 
         if(scrollTextIdx >= scrollTextWidth) {
-            scrollTextText = 0;
+            scrollTextText = NULL;
         }
 
-        update();
+        if(doUpdate) {
+            update();
+        }
     }
+}
+
+bool VM_IIC::scrollTextRunning() {
+    return !(scrollTextText == NULL);
 }

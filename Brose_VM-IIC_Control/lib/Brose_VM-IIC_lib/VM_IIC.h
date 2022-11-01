@@ -35,7 +35,8 @@ class VM_IIC : public Adafruit_GFX {
         void clearDisplay();
 
         void startScrollText(int16_t x, int16_t y, const char* text);
-        void scrollTextTick();
+        void scrollTextTick(bool doUpdate = true);
+        bool scrollTextRunning();
 
     protected:
         void (*i2cWriteByte)(uint8_t, uint8_t);
@@ -53,7 +54,7 @@ class VM_IIC : public Adafruit_GFX {
         uint8_t prevModuleState;
 
         uint16_t scrollTextWidth = 0;
-        int16_t scrollTextIdx = 0, scrollTextY;
+        int16_t scrollTextIdx = 0, scrollTextY, scrollTextXOffset = 0;
         const char* scrollTextText;
         uint16_t progressiveXPos = 0;
 };

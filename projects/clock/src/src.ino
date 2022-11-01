@@ -94,6 +94,10 @@ void setup() {
 
     flipdot.fillScreen(0);
     flipdot.update();
+
+    // flipdot.setFont();
+    // // flipdot.startScrollText(68, 0, "        Aufstaaand! ##################");
+    // flipdot.startScrollText(68, 0, "        Code for Heilbronn        Maker Space experimenta");
 }
 
 String timeStr = "00:00:00";
@@ -134,13 +138,14 @@ void drawTime() {
     buildTimeString();
     // Serial.println(timeStr);
     // Serial.println(dateStr);
-    flipdot.fillScreen(0);
     // flipdot.setFont(&SansSerif_plain_12);
     flipdot.setFont(&DSEG7_Classic_Regular_11);
     // flipdot.setFont();
+    uint16_t timeWidth = flipdot.getTextWidth(timeStr.c_str());
+    // flipdot.fillScreen(0);
+    flipdot.fillRect(0, 0, 68, DISPLAY_HEIGHT, 0);
     flipdot.setCursor(0, 11);
     flipdot.print(timeStr);
-    uint16_t timeWidth = flipdot.getTextWidth(timeStr.c_str());
 
     flipdot.setFont();
     flipdot.setCursor(0, 12);
@@ -161,9 +166,17 @@ void loop() {
     loopOTA();
     wifiMulti.run();
 
-    if(millis() - lastUpdate > 100) {
+    if(millis() - lastUpdate >= 150) {
+        Serial.println(millis() - lastUpdate);
         lastUpdate = millis();
+        flipdot.scrollTextTick(false);
         drawTime();
+
+        if (!flipdot.scrollTextRunning()) { // start scroll text loop
+            flipdot.setFont();
+            flipdot.startScrollText(68, 6, "        Code for Heilbronn        Maker Space experimenta");
+        }
+        
     }
 }
 
