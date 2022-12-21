@@ -15,6 +15,7 @@
 #include <time.h>
 #include "config.h"
 #include "ota.h"
+#include "udp_logging.h"
 
 
 #define DISPLAY_WIDTH   112
@@ -25,6 +26,8 @@ const char* ntpServer = "de.pool.ntp.org";
 const char* TZ_INFO =   "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00"; // Berlin, for others, see: https://remotemonitoringsystems.ca/time-zone-abbreviations.php
 
 XantoI2C i2c(22, 21, 0);
+
+#define DEBUG_println(...) ESP_LOGI("log", __VA_ARGS__)
 
 void i2cWriteByteSoftware(uint8_t addr, uint8_t data) {
     i2c.start();
@@ -77,10 +80,11 @@ void setup() {
 
     wifiMulti.addAP(WIFI_SSID, WIFI_PASS);
     if(wifiMulti.run() == WL_CONNECTED) {
-        Serial.println("");
-        Serial.println("WiFi connected");
-        Serial.println("IP address: ");
-        Serial.println(WiFi.localIP());
+        udp_logging_init("224.1.33.7", 1234);
+        DEBUG_println("");
+        DEBUG_println("WiFi connected");
+        DEBUG_println("IP address: ");
+        DEBUG_println("%s", WiFi.localIP().toString().c_str());
     }
 
     initOTA();
@@ -89,7 +93,7 @@ void setup() {
     setenv("TZ", TZ_INFO, 1);
     if (getNTPtime(10)) {}  // wait up to 10sec to sync
     else {
-        Serial.println("Time not set");
+        DEBUG_println("Time not set");
     }
 
     flipdot.fillScreen(0);
@@ -167,7 +171,7 @@ void loop() {
     wifiMulti.run();
 
     if(millis() - lastUpdate >= 150) {
-        Serial.println(millis() - lastUpdate);
+        // DEBUG_println("Test %d", millis() - lastUpdate);
         lastUpdate = millis();
         flipdot.scrollTextTick(false);
         drawTime();

@@ -4,7 +4,7 @@
 extern VM_IIC flipdot;
 
 void initOTA() {
-    Serial.print("Initializing OTA... ");
+    ESP_LOGI("OTA", "Initializing OTA... ");
     // Port defaults to 3232
     // ArduinoOTA.setPort(3232);
 
@@ -26,38 +26,38 @@ void initOTA() {
             type = "filesystem";
 
         // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-        Serial.println("Start updating " + type);
+        ESP_LOGI("OTA", "Start updating %s", type.c_str());
         flipdot.fillScreen(0);
         flipdot.setFont();
         flipdot.setCursor(0, 7);
         flipdot.print("OTA...");
         flipdot.update();
     });
-    ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
+    ArduinoOTA.onEnd([]() { ESP_LOGI("OTA", "\nEnd"); });
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) { 
-        Serial.printf("Progress: %u%%\r", (progress / (total / 100))); 
+        ESP_LOGI("OTA", "Progress: %u%%\r", (progress / (total / 100))); 
         flipdot.setDot((progress / (total / flipdot.width())), flipdot.height() - 1, 1);
         flipdot.update();
         });
     ArduinoOTA.onError([](ota_error_t error) {
-        Serial.printf("Error[%u]: ", error);
+        ESP_LOGI("OTA", "Error[%u]: ", error);
         if (error == OTA_AUTH_ERROR)
-            Serial.println("Auth Failed");
+            ESP_LOGI("OTA", "Auth Failed");
         else if (error == OTA_BEGIN_ERROR)
-            Serial.println("Begin Failed");
+            ESP_LOGI("OTA", "Begin Failed");
         else if (error == OTA_CONNECT_ERROR)
-            Serial.println("Connect Failed");
+            ESP_LOGI("OTA", "Connect Failed");
         else if (error == OTA_RECEIVE_ERROR)
-            Serial.println("Receive Failed");
+            ESP_LOGI("OTA", "Receive Failed");
         else if (error == OTA_END_ERROR)
-            Serial.println("End Failed");
+            ESP_LOGI("OTA", "End Failed");
         flipdot.fillScreen(0);
         flipdot.print("OTA failed :(");
         flipdot.update();
     });
 
     ArduinoOTA.begin();
-    Serial.println("done.");
+    ESP_LOGI("OTA", "done.");
 }
 
 void loopOTA() { ArduinoOTA.handle(); }
