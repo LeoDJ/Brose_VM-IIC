@@ -83,7 +83,7 @@ int udp_logging_vprintf(const char *str, va_list l) {
     // }
 
     int err = 0;
-    int len;
+    int len = 0;
     char task_name[16];
     char *cur_task = pcTaskGetTaskName(xTaskGetCurrentTaskHandle());
     strncpy(task_name, cur_task, 16);
