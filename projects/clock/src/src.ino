@@ -21,6 +21,7 @@
 #define DISPLAY_WIDTH   112
 #define DISPLAY_HEIGHT  19
 #define FLIP_TIME       550
+#define WIFI_TIMEOUT    (15 * 60 * 1000)    // reboot after 15 minutes without wifi (there's currently a bug in WiFiMulti that doesn't handle reconnects correctly when AP briefly disappears)
 
 const char* ntpServer = "de.pool.ntp.org";
 const char* TZ_INFO =   "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00"; // Berlin, for others, see: https://remotemonitoringsystems.ca/time-zone-abbreviations.php
@@ -81,6 +82,7 @@ void setup() {
     wifiMulti.addAP(WIFI_SSID, WIFI_PASS);
     if(wifiMulti.run() == WL_CONNECTED) {
         udp_logging_init("224.1.33.7", 1234);
+        // udp_logging_init("172.18.3.62", 1234);
         DEBUG_println("");
         DEBUG_println("WiFi connected");
         DEBUG_println("IP address: ");
@@ -165,10 +167,17 @@ void drawTime() {
 }
 
 uint32_t lastUpdate = 0;
+uint32_t lastConnectionTime = 0;
 
 void loop() {
     loopOTA();
-    wifiMulti.run();
+    uint8_t wifiStatus = wifiMulti.run();
+    if (wifiStatus == WL_CONNECTED) {
+        lastConnectionTime = millis();
+    }
+    else if (millis() - lastConnectionTime > WIFI_TIMEOUT) {
+        ESP.restart();  // just reboot the ESP, because of the bug in WiFiMulti
+    }
 
     if(millis() - lastUpdate >= 150) {
         // DEBUG_println("Test %d", millis() - lastUpdate);
