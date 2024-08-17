@@ -56,5 +56,6 @@ class VM_IIC : public Adafruit_GFX {
         uint16_t scrollTextWidth = 0;
         int16_t scrollTextIdx = 0, scrollTextY, scrollTextXOffset = 0;
         const char* scrollTextText;
+        uint32_t scrollTextStarted = 0;
         uint16_t progressiveXPos = 0;
 };

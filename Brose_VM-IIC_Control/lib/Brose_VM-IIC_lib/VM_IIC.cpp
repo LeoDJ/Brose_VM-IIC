@@ -227,6 +227,7 @@ void VM_IIC::startScrollText(int16_t x, int16_t y, const char* text) {
     scrollTextY = y;
     scrollTextXOffset = x;
     scrollTextIdx = 0;
+    scrollTextStarted = millis();
 
     setCursor(x, y);
     setTextColor(1);
@@ -244,7 +245,7 @@ void VM_IIC::scrollTextTick(bool doUpdate) {
         setCursor(-scrollTextIdx + scrollTextXOffset, scrollTextY);
         fillScreen(0);
         print(scrollTextText);
-        scrollTextIdx += 1;
+        scrollTextIdx = (millis() - scrollTextStarted) / 150;
 
         if(scrollTextIdx >= scrollTextWidth) {
             scrollTextText = NULL;
