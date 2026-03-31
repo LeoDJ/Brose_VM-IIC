@@ -231,15 +231,17 @@ void loop() {
         ESP.restart();  // just reboot the ESP, because of the bug in WiFiMulti
     }
 
-    if(millis() - lastUpdate >= 150) {
+    if(millis() - lastUpdate >= 50) {
         // DEBUG_println("Test %d", millis() - lastUpdate);
         lastUpdate = millis();
+
+        flipdot.fillScreen(0);
         flipdot.scrollTextTick(false);
         drawTime();
 
         if (!flipdot.scrollTextRunning()) { // start scroll text loop
             flipdot.setFont();
-            flipdot.startScrollText(68, 6, "        Code for Heilbronn        Maker Space experimenta");
+            flipdot.startScrollText(68, 6, "        Code for Heilbronn\n        Maker Space experimenta");
         }
         
     }

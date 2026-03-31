@@ -131,12 +131,12 @@ void VM_IIC::writeDot(uint8_t x, uint8_t y, bool state) {
 }
 
 
-void VM_IIC::update() {
+void VM_IIC::update(bool forceFullUpdate) {
     prevModuleState = 0;
     prevColumnState = 0xFF;
     for(uint8_t x = 0; x < WIDTH; x++) {
         for(uint8_t y = 0; y < HEIGHT; y++) {
-            if(dotChanged(x, y)) {
+            if(dotChanged(x, y) || forceFullUpdate) {
                 writeDot(x, y, getDot(x, y));
             }
         }
@@ -223,40 +223,110 @@ void VM_IIC::clearDisplay() {
 
 
 void VM_IIC::startScrollText(int16_t x, int16_t y, const char* text) {
-    scrollTextText = text;
-    scrollTextY = y;
-    scrollTextXOffset = x;
-    scrollTextIdx = 0;
-    scrollTextStarted = millis();
+    String str = String(text);
+    int newlineIdx = str.indexOf('\n');
 
-    setCursor(x, y);
-    setTextColor(1);
-    setTextWrap(0);
+    delete _scrollText[0];
+    delete _scrollText[1];
+    _scrollText[0] = NULL;
+    _scrollText[1] = NULL;
 
-    int16_t x_, y_;
-    uint16_t h;
-    getTextBounds(text, x, y, &x_, &y_, &scrollTextWidth, &h);
+    if (newlineIdx != -1) {  // has two lines
+        String line1 = str.substring(0, newlineIdx);
+        String line2 = str.substring(newlineIdx+1);
 
+
+        _scrollText[0] = new ScrollText(this, x, y-4, line1.c_str());
+        _scrollText[1] = new ScrollText(this, x, y+5, line2.c_str(), 150);
+        _scrollText[0]->setSpeed(300, 4);
+        _scrollText[1]->setSpeed(300, 4);
+    }
+    else {
+        _scrollText[0] = new ScrollText(this, x, y, text);
+        _scrollText[0]->setSpeed(150, 2);
+    }
+    
 }
 
-
 void VM_IIC::scrollTextTick(bool doUpdate) {
-    if(scrollTextText) {
-        setCursor(-scrollTextIdx + scrollTextXOffset, scrollTextY);
-        fillScreen(0);
-        print(scrollTextText);
-        scrollTextIdx = (millis() - scrollTextStarted) / 150;
-
-        if(scrollTextIdx >= scrollTextWidth) {
-            scrollTextText = NULL;
-        }
-
-        if(doUpdate) {
-            update();
+    for (int i = 0; i < SCROLL_TEXT_NUM; i++) {
+        if (_scrollText[i]) {
+            _scrollText[i]->tick(doUpdate);
         }
     }
 }
 
 bool VM_IIC::scrollTextRunning() {
-    return !(scrollTextText == NULL);
+    if (_scrollText[0]) {
+        return _scrollText[0]->running();
+    }
+    return false;
+}
+
+
+
+
+
+
+ScrollText::ScrollText(VM_IIC *fd, int16_t x, int16_t y, const char* text, int timeOffset) {
+    _fd = fd;
+    if (text != NULL) {
+        _text = (char*)malloc(strlen(text) + 1);
+        strncpy(_text, text, strlen(text) + 1);
+        _y = y;
+        _xOffset = x;
+        _idx = 0;
+        _startedMs = millis() - timeOffset;
+    
+        _fd->setCursor(x, y);
+        _fd->setTextColor(1);
+        _fd->setTextWrap(0);
+    
+        int16_t x_, y_;
+        uint16_t h;
+        _fd->getTextBounds(text, x, y, &x_, &y_, &_width, &h);
+    }
+}
+
+
+ScrollText::~ScrollText() {
+    if (_text) {
+        free(_text);
+        _text = NULL;
+    }
+}
+
+
+void ScrollText::tick(bool doUpdate) {
+    if(_text) {
+        _fd->setCursor(-_idx + _xOffset, _y);
+        // _fd->fillScreen(0);
+        _fd->print(_text);
+        _idx = ((millis() - _startedMs) / _interval) * _increment;
+
+        if(_idx >= _width) {
+            // _text = NULL;  // stop scroll text
+            _idx = 0;
+            _startedMs += (millis() - _startedMs) / _interval * _interval;
+        }
+
+        if(doUpdate) {
+            _fd->update();
+        }
+    }
+}
+
+void ScrollText::setSpeed(int interval, int increment) {
+    _interval = interval;
+    _increment = increment;
+}
+
+
+void ScrollText::stop() {
+    _text = NULL;
+}
+
+
+bool ScrollText::running() {
+    return !(_text == NULL);
 }

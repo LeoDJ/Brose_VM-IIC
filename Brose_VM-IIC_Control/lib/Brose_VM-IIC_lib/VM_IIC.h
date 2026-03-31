@@ -5,6 +5,29 @@
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_GFX.h>
 
+class VM_IIC;   // forward declaration
+
+class ScrollText {
+    public:
+        ScrollText(VM_IIC *fd, int16_t x, int16_t y, const char* text, int timeOffset = 0);
+        ~ScrollText();
+
+        // void start(int16_t x, int16_t y, const char* text);
+        void tick(bool doUpdate = true);
+        void setSpeed(int interval, int increment);
+        void stop();
+        bool running();
+
+    protected:
+        VM_IIC *_fd;
+        uint16_t _width = 0;
+        int16_t _idx = 0, _y, _xOffset = 0;
+        char* _text = NULL;
+        uint32_t _startedMs = 0;
+        int _interval = 300;
+        int _increment = 4;
+};
+
 
 class VM_IIC : public Adafruit_GFX {
     public:
@@ -21,7 +44,7 @@ class VM_IIC : public Adafruit_GFX {
         uint8_t reverse(uint8_t b);
         void generateDataPacket(uint8_t moduleSelect, uint8_t colAddr, bool colData, uint8_t rowAddr, bool rowLData, bool rowLEnable, bool rowHData, bool rowHEnable);
         void writeDot(uint8_t x, uint8_t y, bool state);
-        void update();
+        void update(bool forceFullUpdate = false);
         bool updateProgressive(); // returns true when cycle finished
 
         void setDot(uint8_t x, uint8_t y, bool state);
@@ -33,7 +56,7 @@ class VM_IIC : public Adafruit_GFX {
         uint16_t getTextWidth(const char* text);
         void drawCenteredText(int16_t xOffset, int16_t y, const char* text);
         void clearDisplay();
-
+        
         void startScrollText(int16_t x, int16_t y, const char* text);
         void scrollTextTick(bool doUpdate = true);
         bool scrollTextRunning();
@@ -53,9 +76,8 @@ class VM_IIC : public Adafruit_GFX {
         uint8_t prevColumnState;
         uint8_t prevModuleState;
 
-        uint16_t scrollTextWidth = 0;
-        int16_t scrollTextIdx = 0, scrollTextY, scrollTextXOffset = 0;
-        const char* scrollTextText;
-        uint32_t scrollTextStarted = 0;
+        static const size_t SCROLL_TEXT_NUM = 4;
+        ScrollText *_scrollText[SCROLL_TEXT_NUM] = {NULL};
+
         uint16_t progressiveXPos = 0;
 };
