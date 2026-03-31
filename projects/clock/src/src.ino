@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <XantoI2C.h>
+#include <driver/i2c.h>
+#include "esp_sntp.h"
 
 #include "VM_IIC.h"
 #include <Fonts/TomThumb.h>
@@ -22,54 +24,99 @@
 #define DISPLAY_HEIGHT  19
 #define FLIP_TIME       550
 #define WIFI_TIMEOUT    (15 * 60 * 1000)    // reboot after 15 minutes without wifi (there's currently a bug in WiFiMulti that doesn't handle reconnects correctly when AP briefly disappears)
+#define NTP_TIMEOUT     (31 * 60 * 1000)    // reboot after 31 minutes without NTP sync
 
 const char* ntpServer = "de.pool.ntp.org";
 const char* TZ_INFO =   "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00"; // Berlin, for others, see: https://remotemonitoringsystems.ca/time-zone-abbreviations.php
 
-XantoI2C i2c(22, 21, 0);
+#define PIN_SDA 21
+#define PIN_SCL 22
 
 #define DEBUG_println(...) ESP_LOGI("log", __VA_ARGS__)
 
-void i2cWriteByteSoftware(uint8_t addr, uint8_t data) {
-    i2c.start();
-    i2c.writeByte(addr);
-    i2c.readAck(); // discard ack
-    i2c.writeByte(data);
-    i2c.readNack(); // discard nack
-    i2c.stop();
+void i2cWriteByteNoACK(uint8_t addr, uint8_t data) {
+    // from esp32-hal-i2c.c > i2cWrite(), but with ack_en = false
+    esp_err_t ret = ESP_FAIL;
+    uint8_t cmd_buff[I2C_LINK_RECOMMENDED_SIZE(1)] = { 0 };
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create_static(cmd_buff, I2C_LINK_RECOMMENDED_SIZE(1));
+    ret = i2c_master_start(cmd);
+    if (ret != ESP_OK) { goto end; }
+    ret = i2c_master_write_byte(cmd, (addr) | I2C_MASTER_WRITE, false);
+    if (ret != ESP_OK) { goto end; }
+    ret = i2c_master_write_byte(cmd, data, false);
+    if (ret != ESP_OK) { goto end; }
+    ret = i2c_master_stop(cmd);
+    if (ret != ESP_OK) { goto end; }
+    ret = i2c_master_cmd_begin((i2c_port_t)0, cmd, 10 / portTICK_RATE_MS);
+
+end:
+    if(cmd != NULL){
+        i2c_cmd_link_delete_static(cmd);
+    }
 }
 
 
-VM_IIC flipdot(DISPLAY_WIDTH, DISPLAY_HEIGHT, FLIP_TIME, i2cWriteByteSoftware);
+VM_IIC flipdot(DISPLAY_WIDTH, DISPLAY_HEIGHT, FLIP_TIME, i2cWriteByteNoACK);
 
 WiFiMulti wifiMulti;
 tm timeinfo;
 time_t now;
 
-bool getNTPtime(int sec) {
-    {
-        uint32_t start = millis();
-        do {
-            time(&now);
-            localtime_r(&now, &timeinfo);
-            // Serial.print(".");
-            delay(10);
-        } while (((millis() - start) <= (1000 * sec)) && (timeinfo.tm_year < (2016 - 1900)));
-        if (timeinfo.tm_year <= (2016 - 1900))
-            return false; // the NTP call was not successful
-        // Serial.print("now ");
-        // Serial.println(now);
-        // char time_output[30];
-        // strftime(time_output, 30, "%a  %d-%m-%y %T", localtime(&now));
-        // Serial.println(time_output);
-        // Serial.println();
+
+uint32_t lastConnectionTime = 0;
+uint32_t lastNtpUpdate = 0;
+
+void checkNTPStatus() {
+    sntp_sync_status_t stat = sntp_get_sync_status();
+    if (stat != 0) {
+        DEBUG_println("Sync status: %d", stat);
     }
+
+    if (stat == SNTP_SYNC_STATUS_COMPLETED) {
+        lastNtpUpdate = millis();
+    }
+
+    // reboot when last two time updates didn't work
+    if (millis() - lastNtpUpdate > NTP_TIMEOUT) {
+        DEBUG_println("NTP Timeout. Rebooting...");
+        delay(10);
+        ESP.restart();
+    }
+}
+
+bool getNTPtime(int sec) {
+    checkNTPStatus();
+    
+    uint32_t start = millis();
+    do {
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        // Serial.print(".");
+        delay(10);
+    } while (((millis() - start) <= (1000 * sec)) && (timeinfo.tm_year < (2016 - 1900)));
+    if (timeinfo.tm_year <= (2016 - 1900))
+    return false; // the NTP call was not successful
+    
+    // Serial.print("now ");
+    // Serial.println(now);
+    // char time_output[30];
+    // strftime(time_output, 30, "%a  %d-%m-%y %T", localtime(&now));
+    // Serial.println(time_output);
+    // Serial.println();
     return true;
+}
+
+// didn't work for some reason
+void timeSyncCallback(struct timeval *tv) {
+    DEBUG_println("NTP sync successful");
+    // ntpSynced = true;
 }
 
 void setup() {
     Serial.begin(115200);
     Serial.println("\n\n >> Flipdot Clock <<");
+    
+    Wire.begin(PIN_SDA, PIN_SCL, 1000e3);
 
     flipdot.setModuleMapping(8, 7, 6, 5);
     
@@ -81,6 +128,7 @@ void setup() {
 
     wifiMulti.addAP(WIFI_SSID, WIFI_PASS);
     if(wifiMulti.run() == WL_CONNECTED) {
+        WiFi.setHostname(MY_HOSTNAME);
         udp_logging_init("224.1.33.7", 1234);
         // udp_logging_init("172.18.3.62", 1234);
         DEBUG_println("");
@@ -90,7 +138,10 @@ void setup() {
     }
 
     initOTA();
-    
+
+    sntp_set_sync_interval(15 * 60 * 1000);  // set to 15min, default is 3h
+    DEBUG_println("Time Sync Interval: %d s", sntp_get_sync_interval()/1000);
+    // sntp_set_time_sync_notification_cb(timeSyncCallback); // didn't work
     configTime(0, 0, ntpServer);
     setenv("TZ", TZ_INFO, 1);
     if (getNTPtime(10)) {}  // wait up to 10sec to sync
@@ -167,7 +218,6 @@ void drawTime() {
 }
 
 uint32_t lastUpdate = 0;
-uint32_t lastConnectionTime = 0;
 
 void loop() {
     loopOTA();
@@ -176,6 +226,8 @@ void loop() {
         lastConnectionTime = millis();
     }
     else if (millis() - lastConnectionTime > WIFI_TIMEOUT) {
+        DEBUG_println("WiFi Timeout. Rebooting...");
+        delay(10);
         ESP.restart();  // just reboot the ESP, because of the bug in WiFiMulti
     }
 
@@ -191,5 +243,13 @@ void loop() {
         }
         
     }
+
+    // flip screen constantly 
+    // flipdot.fillScreen(0);
+    // flipdot.update();
+    // delay(50);
+    // flipdot.fillScreen(1);
+    // flipdot.update();
+    // delay(50);
 }
 
