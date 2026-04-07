@@ -74,6 +74,12 @@ void mqttInit() {
             updateValues();
         }
     });
+
+    // Hackily set startup text
+    haText1.updateText("Code for Heilbronn");
+    setLine(0, "Code for Heilbronn");
+    haText2.updateText("Maker Space experimenta");
+    setLine(1, "Maker Space experimenta");
 }
 
 void mqttLoop() {

@@ -243,10 +243,10 @@ void loop() {
         flipdot.scrollTextTick(false);
         drawTime();
 
-        if (!flipdot.scrollTextRunning()) { // start scroll text loop
-            flipdot.setFont();
-            flipdot.startScrollText(68, 6, "        Code for Heilbronn\n        Maker Space experimenta");
-        }
+        // if (!flipdot.scrollTextRunning()) { // start scroll text loop
+        //     flipdot.setFont();
+        //     flipdot.startScrollText(68, 6, "        Code for Heilbronn\n        Maker Space experimenta");
+        // }
     }
 
     // flip screen constantly 
