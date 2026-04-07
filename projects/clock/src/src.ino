@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <XantoI2C.h>
 #include <driver/i2c.h>
 #include "esp_sntp.h"
 
@@ -18,6 +17,7 @@
 #include "config.h"
 #include "ota.h"
 #include "udp_logging.h"
+#include "mqttHA.h"
 
 
 #define DISPLAY_WIDTH   112
@@ -152,6 +152,8 @@ void setup() {
     flipdot.fillScreen(0);
     flipdot.update();
 
+    mqttInit();
+
     // flipdot.setFont();
     // // flipdot.startScrollText(68, 0, "        Aufstaaand! ##################");
     // flipdot.startScrollText(68, 0, "        Code for Heilbronn        Maker Space experimenta");
@@ -231,6 +233,8 @@ void loop() {
         ESP.restart();  // just reboot the ESP, because of the bug in WiFiMulti
     }
 
+    mqttLoop();
+
     if(millis() - lastUpdate >= 50) {
         // DEBUG_println("Test %d", millis() - lastUpdate);
         lastUpdate = millis();
@@ -243,7 +247,6 @@ void loop() {
             flipdot.setFont();
             flipdot.startScrollText(68, 6, "        Code for Heilbronn\n        Maker Space experimenta");
         }
-        
     }
 
     // flip screen constantly 

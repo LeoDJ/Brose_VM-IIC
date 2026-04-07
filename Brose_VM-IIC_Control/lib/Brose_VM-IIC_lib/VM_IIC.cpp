@@ -245,7 +245,6 @@ void VM_IIC::startScrollText(int16_t x, int16_t y, const char* text) {
         _scrollText[0] = new ScrollText(this, x, y, text);
         _scrollText[0]->setSpeed(150, 2);
     }
-    
 }
 
 void VM_IIC::scrollTextTick(bool doUpdate) {
@@ -285,6 +284,12 @@ ScrollText::ScrollText(VM_IIC *fd, int16_t x, int16_t y, const char* text, int t
         int16_t x_, y_;
         uint16_t h;
         _fd->getTextBounds(text, x, y, &x_, &y_, &_width, &h);
+
+        _areaWidth = _fd->width() - _xOffset;
+
+        if (_width < _areaWidth) {
+            _needsScrolling = false;
+        }
     }
 }
 
@@ -299,15 +304,22 @@ ScrollText::~ScrollText() {
 
 void ScrollText::tick(bool doUpdate) {
     if(_text) {
-        _fd->setCursor(-_idx + _xOffset, _y);
-        // _fd->fillScreen(0);
-        _fd->print(_text);
-        _idx = ((millis() - _startedMs) / _interval) * _increment;
-
-        if(_idx >= _width) {
-            // _text = NULL;  // stop scroll text
-            _idx = 0;
-            _startedMs += (millis() - _startedMs) / _interval * _interval;
+        if (_needsScrolling) {
+            _fd->setCursor(-_idx + _xOffset + _areaWidth, _y);
+            // _fd->fillScreen(0);
+            _fd->print(_text);
+            _idx = ((millis() - _startedMs) / _interval) * _increment;
+            
+            if(_idx >= _width + _areaWidth) {
+                // _text = NULL;  // stop scroll text
+                // restart scroll text
+                _idx = 0;
+                _startedMs += (millis() - _startedMs) / _interval * _interval;
+            }
+        }
+        else {  // print text statically
+            _fd->setCursor(_xOffset + 1, _y);
+            _fd->print(_text);
         }
 
         if(doUpdate) {

@@ -20,12 +20,13 @@ class ScrollText {
 
     protected:
         VM_IIC *_fd;
-        uint16_t _width = 0;
+        uint16_t _width = 0, _areaWidth;
         int16_t _idx = 0, _y, _xOffset = 0;
         char* _text = NULL;
         uint32_t _startedMs = 0;
         int _interval = 300;
         int _increment = 4;
+        bool _needsScrolling = true;
 };
 
 
